@@ -2,30 +2,6 @@ import React, { useRef } from 'react';
 import Sketch from 'react-p5';
 import MersenneTwister from 'mersenne-twister';
 
-/*
-Create your Custom style to be turned into a EthBlock.art Mother NFT
-
-Basic rules:
- - use a minimum of 1 and a maximum of 4 "modifiers", modifiers are values between 0 and 1,
- - use a minimum of 1 and a maximum of 3 colors, the color "background" will be set at the canvas root
- - Use the block as source of entropy, no Math.random() allowed!
- - You can use a "shuffle bag" using data from the block as seed, a MersenneTwister library is provided
-
- Arguments:
-  - block: the blockData, in this example template you are given 3 different blocks to experiment with variations, check App.js to learn more
-  - mod[1-3]: template modifier arguments with arbitrary defaults to get your started
-  - color: template color argument with arbitrary default to get you started
-
-Getting started:
- - Write p5.js code, comsuming the block data and modifier arguments,
-   make it cool and use no random() internally, component must be pure, output deterministic
- - Customize the list of arguments as you wish, given the rules listed below
- - Provide a set of initial /default values for the implemented arguments, your preset.
- - Think about easter eggs / rare attributes, display something different every 100 blocks? display something unique with 1% chance?
-
- - check out p5.js documentation for examples!
-*/
-
 let DEFAULT_SIZE = 500;
 const CustomStyle = ({
   block,
@@ -34,10 +10,10 @@ const CustomStyle = ({
   width,
   height,
   handleResize,
-  mod1 = 0.75, // Example: replace any number in the code with mod1, mod2, or color values
-  mod2 = 0.25,
-  color1 = '#4f83f1',
-  background = '#ccc',
+  thickness = 0.75,
+  opacity = 0.25,
+  fill_color = '#000000',
+  background = '#ffffff',
 }) => {
   const shuffleBag = useRef();
   const hoistedValue = useRef();
@@ -73,15 +49,6 @@ const CustomStyle = ({
     };
   };
 
-  // draw() is called right after setup and in a loop
-  // disabling the loop prevents controls from working correctly
-  // code must be deterministic so every loop instance results in the same output
-
-  // Basic example of a drawing something using:
-  // a) the block hash as initial seed (shuffleBag)
-  // b) individual transactions in a block (seed)
-  // c) custom parameters creators can customize (mod1, color1)
-  // d) final drawing reacting to screen resizing (M)
   const draw = (p5) => {
     let WIDTH = width;
     let HEIGHT = height;
@@ -93,27 +60,56 @@ const CustomStyle = ({
     // reset shuffle bag
     let seed = parseInt(hash.slice(0, 16), 16);
     shuffleBag.current = new MersenneTwister(seed);
-    let objs = block.transactions.map((t) => {
-      let seed = parseInt(t.hash.slice(0, 16), 16);
-      return {
-        y: shuffleBag.current.random(),
-        x: shuffleBag.current.random(),
-        radius: seed / 1000000000000000,
-      };
-    });
-
+    
     // example assignment of hoisted value to be used as NFT attribute later
     hoistedValue.current = 42;
 
-    objs.map((dot, i) => {
-      p5.stroke(color1);
-      p5.strokeWeight(1 + mod2 * 10);
-      p5.ellipse(
-        200 * dot.y * 6 * M,
-        100 * dot.x * 6 * M,
-        dot.radius * M * mod1
-      );
-    });
+    // create star
+    let n, s, p;
+    n = 10 + 14 * parseInt(shuffleBag.current.random());
+    do {
+      s = [ 
+        1 + (n-1) * parseInt(shuffleBag.current.random()),
+        1 + (n-1) * parseInt(shuffleBag.current.random()), 
+        1 + (n-1) * parseInt(shuffleBag.current.random())
+      ];
+    } 
+    while (n % s[2] === 0);
+
+    p = [];
+    for (var i = 0; i < n; i++) {
+      var ang = p5.lerp(0, p5.TWO_PI, i / n);
+      p.push({x: 0.4 * width * p5.cos(ang), y: 0.4 * height * p5.sin(ang)});
+    }  
+    
+    var col1 = p5.color(fill_color);
+    var col2 = p5.color(fill_color);
+    col1.setAlpha(75 * opacity);
+    col2.setAlpha(120 * opacity);
+
+    p5.push();
+    p5.background(background);   
+    p5.fill(col1);
+    p5.stroke(col2);
+    p5.strokeWeight(5.0 * thickness);
+    
+    p5.translate(WIDTH/2, HEIGHT/2);
+    var i1 = 0;
+    do {
+      var i2 = (i1 + s[0]) % n;
+      var i3 = (i1 + s[1]) % n;
+      var i4 = (i1 + s[2]) % n;
+      p5.beginShape();
+        p5.curveVertex(p[i1].x, p[i1].y);
+        p5.curveVertex(p[i2].x, p[i2].y);
+        p5.curveVertex(p[i3].x, p[i3].y);
+        p5.curveVertex(p[i4].x, p[i4].y);
+      p5.endShape(p5.CLOSE);
+      p5.bezier(p[i1].x, p[i1].y, p[i2].x, p[i2].y, p[i3].x, p[i3].y, p[i4].x, p[i4].y);
+      i1 = i3;
+    } 
+    while (i1 !== 0); 
+    p5.pop();
   };
 
   return <Sketch setup={setup} draw={draw} windowResized={handleResize} />;
@@ -122,15 +118,15 @@ const CustomStyle = ({
 export default CustomStyle;
 
 const styleMetadata = {
-  name: '',
-  description: '',
+  name: 'Stars',
+  description: 'Generate a random n-pointed star',
   image: '',
-  creator_name: '',
+  creator_name: 'Gene Kogan',
   options: {
-    mod1: 0.4,
-    mod2: 0.1,
-    color1: '#fff000',
-    background: '#000000',
+    thickness: 0.4,
+    opacity: 0.1,
+    fill_color: '#000000',
+    background: '#ffffff',
   },
 };
 
